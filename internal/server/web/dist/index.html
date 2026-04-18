@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BucketDesk</title>
+    <style>
+      :root {
+        --blue: #197bff;
+        --green: #008951;
+        --red: #be1d33;
+        --text: #0f172a;
+        --muted: #64748b;
+        --line: #e2e8f0;
+        --soft: #f8fafc;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Tahoma, Arial, sans-serif; background: var(--soft); color: var(--text); }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      .shell { min-height: 100vh; display: grid; grid-template-columns: 292px minmax(0, 1fr); }
+      .sidebar { padding: 20px; border-inline-end: 1px solid var(--line); background: #fff; }
+      .brand, .topbar, .actions, .tools, .title, .notice, .row, .toggle { display: flex; align-items: center; }
+      .brand { gap: 12px; margin-bottom: 18px; }
+      .brandIcon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 8px; background: #eff6ff; color: var(--blue); font-size: 24px; }
+      .brand strong, .brand small, .profile span, .profile small { display: block; }
+      .brand small, .profile small, .topbar p, label span, .empty { color: var(--muted); }
+      .workspace { min-width: 0; padding: 24px; }
+      .topbar { justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+      h1 { margin: 0; font-size: 26px; }
+      .topbar p { margin: 4px 0 0; overflow-wrap: anywhere; }
+      .actions, .tools { gap: 8px; flex-wrap: wrap; }
+      .panel { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
+      .title { gap: 8px; margin-bottom: 14px; font-weight: 700; }
+      .grid { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 14px; }
+      label { display: grid; gap: 6px; }
+      input { width: 100%; min-height: 42px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 12px; outline: none; }
+      input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(25, 123, 255, .12); }
+      .secret { position: relative; }
+      .secret button { position: absolute; inset-inline-end: 8px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: var(--muted); }
+      .btn, .iconBtn { min-height: 40px; border: 0; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 150ms ease; }
+      .btn { padding: 0 16px; color: #fff; background: var(--blue); }
+      .btn.green { background: var(--green); }
+      .btn.red { color: var(--red); background: #fff1f2; }
+      .iconBtn { min-width: 40px; padding: 0 10px; color: #475569; background: #f1f5f9; }
+      .newBtn { width: 100%; color: #0058cc; background: #eff6ff; margin-bottom: 14px; }
+      button:disabled { cursor: not-allowed; opacity: .55; }
+      .profileList { display: grid; gap: 8px; }
+      .profile { width: 100%; border: 1px solid transparent; border-radius: 8px; background: transparent; padding: 12px; text-align: start; display: grid; grid-template-columns: 20px 1fr; gap: 8px 10px; color: #334155; }
+      .profile small { grid-column: 2; direction: ltr; text-align: start; }
+      .profile.active { border-color: #bfdbfe; background: #eff6ff; color: #0058cc; }
+      .toggle { gap: 10px; padding-top: 24px; color: #334155; }
+      .toggle input { width: auto; min-height: auto; }
+      .formActions { align-self: end; display: flex; gap: 8px; flex-wrap: wrap; }
+      .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+      .crumb { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+      .crumb button { border: 0; border-radius: 8px; background: #f1f5f9; color: #334155; padding: 8px 10px; }
+      .search { position: relative; min-width: 260px; }
+      .search input { padding-inline-start: 36px; }
+      .search::before { content: "⌕"; position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+      .folderGrid, .objectGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+      .folderGrid { margin-bottom: 16px; }
+      .folderCard, .objectCard { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
+      .folderCard { min-height: 116px; display: grid; place-items: center; gap: 8px; color: #475569; }
+      .objectCard { position: relative; }
+      .objectCard.selected { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(25, 123, 255, .14); }
+      .preview { aspect-ratio: 1; background: #f1f5f9; display: grid; place-items: center; color: #94a3b8; font-size: 36px; position: relative; }
+      .preview img { width: 100%; height: 100%; object-fit: cover; }
+      .select, .copy { position: absolute; z-index: 2; border: 0; border-radius: 8px; width: 30px; height: 30px; display: grid; place-items: center; }
+      .select { top: 8px; inset-inline-start: 8px; color: white; background: var(--blue); }
+      .copy { top: 8px; inset-inline-end: 8px; color: #475569; background: rgba(255,255,255,.92); }
+      .meta { padding: 10px; }
+      .meta strong { display: block; direction: ltr; text-align: start; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .meta small { color: var(--muted); }
+      .notice { justify-content: space-between; gap: 8px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #bbf7d0; color: #166534; background: #f0fdf4; border-radius: 8px; }
+      .notice button { border: 0; background: transparent; font-size: 20px; }
+      .loading, .empty { display: grid; place-items: center; min-height: 140px; gap: 8px; color: var(--muted); }
+      .pager { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 18px; color: var(--muted); }
+      @media (max-width: 1100px) {
+        .shell { grid-template-columns: 1fr; }
+        .sidebar { border-inline-end: 0; border-bottom: 1px solid var(--line); }
+        .grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+      }
+      @media (max-width: 720px) {
+        .workspace { padding: 16px; }
+        .topbar, .toolbar { align-items: stretch; flex-direction: column; }
+        .grid { grid-template-columns: 1fr; }
+        .search { min-width: 0; width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brandIcon">☁</span>
+          <div>
+            <strong>BucketDesk</strong>
+            <small data-i18n="tagline">مدیریت bucket بدون دسترسی به MinIO Console</small>
+          </div>
+        </div>
+        <button class="btn newBtn" id="newProfile">＋ <span data-i18n="newProfile">پروفایل جدید</span></button>
+        <div class="profileList" id="profiles"></div>
+      </aside>
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h1 id="headline" data-i18n="createConnection">اتصال MinIO را بسازید</h1>
+            <p id="subtitle" dir="ltr">Scoped S3 credentials, no MinIO Console required</p>
+          </div>
+          <div class="actions">
+            <button class="iconBtn" id="language">🌐 EN</button>
+            <button class="iconBtn" id="refresh" title="Refresh">↻</button>
+            <button class="btn" id="uploadBtn">⬆ <span data-i18n="upload">آپلود</span></button>
+            <input id="files" type="file" multiple hidden />
+          </div>
+        </header>
+        <div class="notice" id="notice" hidden><span id="noticeText"></span><button id="dismiss">×</button></div>
+        <section class="panel">
+          <div class="title">⚙ <span data-i18n="connectionSettings">تنظیمات اتصال</span></div>
+          <form class="grid" id="profileForm">
+            <label><span data-i18n="profileName">نام پروفایل</span><input id="name" /></label>
+            <label><span>Endpoint URL</span><input id="endpoint" dir="ltr" placeholder="https://s3.example.com" /></label>
+            <label><span>Access Key ID</span><input id="accessKey" dir="ltr" /></label>
+            <label><span>Secret Access Key</span><span class="secret"><input id="secretKey" type="password" dir="ltr" /><button type="button" id="toggleSecret">👁</button></span></label>
+            <label><span>Region</span><input id="region" dir="ltr" /></label>
+            <label><span>Bucket</span><input id="bucket" dir="ltr" /></label>
+            <label><span>CDN URL</span><input id="cdnUrl" dir="ltr" placeholder="https://cdn.example.com" /></label>
+            <label class="toggle"><input id="pathStyle" type="checkbox" /> <span>Use Path-Style Endpoint</span></label>
+            <div class="formActions">
+              <button class="btn" type="submit">💾 <span data-i18n="save">ذخیره</span></button>
+              <button class="btn green" type="button" id="test">◌ <span data-i18n="testConnection">تست اتصال</span></button>
+            </div>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="toolbar">
+            <div class="crumb" id="crumb"><button data-root="true">root</button></div>
+            <div class="tools">
+              <div class="search"><input id="search" data-placeholder="searchObjects" placeholder="جستجو در objectها..." /></div>
+              <button class="btn red" id="delete">🗑 <span data-i18n="delete">حذف</span></button>
+            </div>
+          </div>
+          <div class="loading" id="loading" hidden data-i18n="readingBucket">در حال خواندن bucket...</div>
+          <div class="folderGrid" id="folders"></div>
+          <div class="objectGrid" id="objects"></div>
+          <div class="empty" id="empty" data-i18n="emptyPath">این مسیر خالی است یا هنوز پروفایلی انتخاب نشده.</div>
+          <div class="pager">
+            <button class="iconBtn" id="prev">‹</button>
+            <span><span data-i18n="page">صفحه</span> <span id="page">1</span></span>
+            <button class="iconBtn" id="next">›</button>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script>
+      const dict = {
+        fa: {
+          tagline: 'مدیریت bucket بدون دسترسی به MinIO Console',
+          newProfile: 'پروفایل جدید',
+          createConnection: 'اتصال MinIO را بسازید',
+          scopedAccess: 'دسترسی محدود S3، بدون نیاز به MinIO Console',
+          upload: 'آپلود',
+          connectionSettings: 'تنظیمات اتصال',
+          profileName: 'نام پروفایل',
+          save: 'ذخیره',
+          testConnection: 'تست اتصال',
+          searchObjects: 'جستجو در objectها...',
+          delete: 'حذف',
+          readingBucket: 'در حال خواندن bucket...',
+          emptyPath: 'این مسیر خالی است یا هنوز پروفایلی انتخاب نشده.',
+          page: 'صفحه',
+          savedSecret: 'ذخیره شده، برای تغییر پر کنید',
+          profileSaved: 'پروفایل ذخیره شد',
+          browseFailed: 'خطا در مرور bucket',
+          uploadFailed: 'خطا در آپلود',
+          deleteFailed: 'خطا در حذف',
+          connectionFailed: 'اتصال برقرار نشد',
+          copied: 'آدرس کپی شد',
+          deleted: 'objectها حذف شدند',
+          confirmDelete: count => `حذف ${count} object انتخاب‌شده؟`,
+          uploaded: count => `${count} فایل آپلود شد`,
+          connectionOk: bucket => `اتصال موفق بود: ${bucket}`,
+        },
+        en: {
+          tagline: 'Manage buckets without exposing the MinIO Console',
+          newProfile: 'New profile',
+          createConnection: 'Create a MinIO connection',
+          scopedAccess: 'Scoped S3 credentials, no MinIO Console required',
+          upload: 'Upload',
+          connectionSettings: 'Connection settings',
+          profileName: 'Profile name',
+          save: 'Save',
+          testConnection: 'Test connection',
+          searchObjects: 'Search objects...',
+          delete: 'Delete',
+          readingBucket: 'Reading bucket...',
+          emptyPath: 'This path is empty, or no profile is selected yet.',
+          page: 'Page',
+          savedSecret: 'Saved. Fill only to replace it',
+          profileSaved: 'Profile saved',
+          browseFailed: 'Failed to browse bucket',
+          uploadFailed: 'Upload failed',
+          deleteFailed: 'Delete failed',
+          connectionFailed: 'Connection failed',
+          copied: 'URL copied',
+          deleted: 'Objects deleted',
+          confirmDelete: count => `Delete ${count} selected object(s)?`,
+          uploaded: count => `${count} files uploaded`,
+          connectionOk: bucket => `Connection succeeded: ${bucket}`,
+        }
+      };
+      const $ = id => document.getElementById(id);
+      let locale = localStorage.getItem('bucketdesk.locale') || 'fa';
+      let profiles = [];
+      let active = '';
+      let prefix = '';
+      let nextToken = '';
+      let page = 0;
+      let tokens = [''];
+      let objects = [];
+      let folders = [];
+      let selected = new Set();
+      const fields = ['name', 'endpoint', 'accessKey', 'secretKey', 'region', 'bucket', 'cdnUrl', 'pathStyle'];
+      const emptyProfile = { id: '', name: 'Production media', endpoint: '', accessKey: '', secretKey: '', region: 'us-east-1', bucket: '', cdnUrl: '', pathStyle: true };
+
+      function tr(key) { return dict[locale][key]; }
+      function n(value) { return locale === 'fa' ? String(value).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[Number(d)]) : String(value); }
+      function show(message) { $('noticeText').textContent = message; $('notice').hidden = false; }
+      function profilePayload() {
+        return {
+          id: $('name').value.trim().toLowerCase().replace(/\s+/g, '-'),
+          name: $('name').value,
+          endpoint: $('endpoint').value,
+          accessKey: $('accessKey').value,
+          secretKey: $('secretKey').value,
+          region: $('region').value || 'us-east-1',
+          bucket: $('bucket').value,
+          cdnUrl: $('cdnUrl').value,
+          pathStyle: $('pathStyle').checked,
+        };
+      }
+      function fill(profile) {
+        const item = profile || emptyProfile;
+        $('name').value = item.name || '';
+        $('endpoint').value = item.endpoint || '';
+        $('accessKey').value = item.accessKey || '';
+        $('secretKey').value = '';
+        $('secretKey').placeholder = item.hasSecret ? tr('savedSecret') : '';
+        $('region').value = item.region || 'us-east-1';
+        $('bucket').value = item.bucket || '';
+        $('cdnUrl').value = item.cdnUrl || '';
+        $('pathStyle').checked = !!item.pathStyle;
+      }
+      function applyLocale() {
+        document.documentElement.lang = locale;
+        document.documentElement.dir = locale === 'fa' ? 'rtl' : 'ltr';
+        localStorage.setItem('bucketdesk.locale', locale);
+        document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = tr(el.dataset.i18n));
+        document.querySelectorAll('[data-placeholder]').forEach(el => el.placeholder = tr(el.dataset.placeholder));
+        $('language').innerHTML = locale === 'fa' ? '🌐 EN' : '🌐 فا';
+        const profile = profiles.find(p => p.id === active);
+        $('headline').textContent = profile ? profile.name : tr('createConnection');
+        $('subtitle').textContent = profile ? (profile.publicBase || tr('scopedAccess')) : tr('scopedAccess');
+        $('secretKey').placeholder = profile && profile.hasSecret ? tr('savedSecret') : '';
+        $('page').textContent = n(page + 1);
+      }
+      async function api(path, options) {
+        const response = await fetch(path, options);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || response.statusText);
+        return data;
+      }
+      async function loadProfiles() {
+        const data = await api('/api/profiles');
+        profiles = data.profiles || [];
+        if (!active && profiles.length) active = profiles[0].id;
+        renderProfiles();
+        fill(profiles.find(p => p.id === active));
+        applyLocale();
+        if (active) await loadObjects('', 0);
+      }
+      function renderProfiles() {
+        $('profiles').innerHTML = profiles.map(p => `<button class="profile ${p.id === active ? 'active' : ''}" data-id="${p.id}"><span>▣</span><span>${escapeHtml(p.name)}</span><small>${escapeHtml(p.bucket)}</small></button>`).join('');
+        document.querySelectorAll('.profile').forEach(btn => btn.onclick = async () => {
+          active = btn.dataset.id;
+          prefix = '';
+          page = 0;
+          tokens = [''];
+          fill(profiles.find(p => p.id === active));
+          renderProfiles();
+          applyLocale();
+          await loadObjects('', 0);
+        });
+      }
+      async function loadObjects(nextPrefix = prefix, nextPage = page) {
+        if (!active) return;
+        $('loading').hidden = false;
+        try {
+          const params = new URLSearchParams({ profile: active, prefix: nextPrefix, limit: '120' });
+          if (tokens[nextPage]) params.set('token', tokens[nextPage]);
+          const data = await api(`/api/objects?${params}`);
+          prefix = nextPrefix;
+          page = nextPage;
+          nextToken = data.nextToken || '';
+          if (nextToken) tokens[page + 1] = nextToken;
+          folders = data.folders || [];
+          objects = data.objects || [];
+          selected = new Set();
+          renderCrumb();
+          renderObjects(folders, objects);
+        } catch (error) {
+          show(error.message || tr('browseFailed'));
+        } finally {
+          $('loading').hidden = true;
+        }
+      }
+      function renderCrumb() {
+        const parts = prefix.replace(/\/$/, '').split('/').filter(Boolean);
+        let html = '<button data-prefix="">root</button>';
+        parts.forEach((part, index) => {
+          html += `<span>›</span><button data-prefix="${parts.slice(0, index + 1).join('/')}/">${escapeHtml(part)}</button>`;
+        });
+        $('crumb').innerHTML = html;
+        $('crumb').querySelectorAll('button').forEach(button => button.onclick = () => loadObjects(button.dataset.prefix || '', 0));
+        $('page').textContent = n(page + 1);
+      }
+      function renderObjects(folders, list) {
+        const search = $('search').value.trim().toLowerCase();
+        const filtered = search ? list.filter(item => item.name.toLowerCase().includes(search) || item.key.toLowerCase().includes(search)) : list;
+        $('folders').innerHTML = (prefix ? '<button class="folderCard" data-up="true"><b>↑</b><span>..</span></button>' : '') + folders.map(f => `<button class="folderCard" data-prefix="${escapeAttr(f.prefix)}"><b>📁</b><span>${escapeHtml(f.name)}</span></button>`).join('');
+        $('folders').querySelectorAll('[data-prefix]').forEach(button => button.onclick = () => loadObjects(button.dataset.prefix, 0));
+        const up = $('folders').querySelector('[data-up]');
+        if (up) up.onclick = () => {
+          const parts = prefix.replace(/\/$/, '').split('/').filter(Boolean);
+          parts.pop();
+          loadObjects(parts.length ? `${parts.join('/')}/` : '', 0);
+        };
+        $('objects').innerHTML = filtered.map(item => {
+          const img = item.mimeType && item.mimeType.startsWith('image/') ? `<img src="${escapeAttr(item.url)}" alt="" loading="lazy">` : '□';
+          return `<article class="objectCard" data-key="${escapeAttr(item.key)}"><button class="select">✓</button><div class="preview">${img}<button class="copy" data-url="${escapeAttr(item.url)}">⧉</button></div><div class="meta"><strong title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</strong><small>${formatSize(item.size)}</small></div></article>`;
+        }).join('');
+        $('objects').querySelectorAll('.select').forEach(button => button.onclick = event => {
+          const card = event.target.closest('.objectCard');
+          const key = card.dataset.key;
+          if (selected.has(key)) selected.delete(key); else selected.add(key);
+          card.classList.toggle('selected', selected.has(key));
+        });
+        $('objects').querySelectorAll('.copy').forEach(button => button.onclick = event => {
+          event.stopPropagation();
+          navigator.clipboard.writeText(button.dataset.url).then(() => show(tr('copied')));
+        });
+        $('empty').hidden = folders.length > 0 || filtered.length > 0;
+        $('prev').disabled = page === 0;
+        $('next').disabled = !nextToken;
+      }
+      function formatSize(size) {
+        if (size < 1024) return `${n(size)} B`;
+        if (size < 1024 * 1024) return `${n(Math.round(size / 1024))} KB`;
+        return `${n((size / 1024 / 1024).toFixed(1))} MB`;
+      }
+      function escapeHtml(value) {
+        return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+      }
+      function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#096;'); }
+
+      $('language').onclick = () => { locale = locale === 'fa' ? 'en' : 'fa'; applyLocale(); renderObjects(folders, objects); };
+      $('dismiss').onclick = () => $('notice').hidden = true;
+      $('newProfile').onclick = () => fill(emptyProfile);
+      $('toggleSecret').onclick = () => $('secretKey').type = $('secretKey').type === 'password' ? 'text' : 'password';
+      $('profileForm').onsubmit = async event => {
+        event.preventDefault();
+        try {
+          const saved = await api('/api/profiles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profilePayload()) });
+          active = saved.id;
+          show(tr('profileSaved'));
+          await loadProfiles();
+        } catch (error) { show(error.message); }
+      };
+      $('test').onclick = async () => {
+        try {
+          const data = await api('/api/test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profilePayload()) });
+          show(tr('connectionOk')(data.bucket));
+        } catch (error) { show(error.message || tr('connectionFailed')); }
+      };
+      $('refresh').onclick = () => loadObjects(prefix, page);
+      $('uploadBtn').onclick = () => $('files').click();
+      $('files').onchange = async event => {
+        const files = Array.from(event.target.files || []);
+        event.target.value = '';
+        if (!active || files.length === 0) return;
+        const form = new FormData();
+        files.forEach(file => form.append('files', file));
+        try {
+          const params = new URLSearchParams({ profile: active, prefix });
+          await fetch(`/api/upload?${params}`, { method: 'POST', body: form }).then(async response => {
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || tr('uploadFailed'));
+          });
+          show(tr('uploaded')(n(files.length)));
+          await loadObjects(prefix, page);
+        } catch (error) { show(error.message); }
+      };
+      $('delete').onclick = async () => {
+        if (!active || selected.size === 0) return;
+        if (!confirm(tr('confirmDelete')(n(selected.size)))) return;
+        try {
+          const params = new URLSearchParams({ profile: active });
+          await api(`/api/objects?${params}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keys: Array.from(selected) }) });
+          show(tr('deleted'));
+          await loadObjects(prefix, page);
+        } catch (error) { show(error.message || tr('deleteFailed')); }
+      };
+      $('search').oninput = () => renderObjects(folders, objects);
+      $('prev').onclick = () => loadObjects(prefix, Math.max(0, page - 1));
+      $('next').onclick = () => nextToken && loadObjects(prefix, page + 1);
+      applyLocale();
+      loadProfiles().catch(error => show(error.message));
+    </script>
+  </body>
+</html>

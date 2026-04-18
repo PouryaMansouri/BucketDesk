@@ -1,0 +1,12 @@
+node_modules/
+dist/
+web/dist/
+!internal/server/web/dist/
+!internal/server/web/dist/index.html
+.DS_Store
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+coverage/
