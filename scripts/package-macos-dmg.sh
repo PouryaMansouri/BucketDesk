@@ -31,6 +31,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<PLIST
   <string>${CLEAN_VERSION}</string>
   <key>CFBundleExecutable</key>
   <string>BucketDesk</string>
+  <key>CFBundleIconFile</key>
+  <string>bucketdesk</string>
   <key>LSMinimumSystemVersion</key>
   <string>11.0</string>
   <key>LSUIElement</key>
@@ -48,6 +50,11 @@ GOOS=darwin GOARCH="$ARCH" CGO_ENABLED=0 go build \
 chmod +x "$APP_DIR/Contents/MacOS/BucketDesk"
 cp "$ROOT_DIR/LICENSE" "$APP_DIR/Contents/Resources/LICENSE"
 cp "$ROOT_DIR/NOTICE" "$APP_DIR/Contents/Resources/NOTICE"
+cp "$ROOT_DIR/assets/bucketdesk.icns" "$APP_DIR/Contents/Resources/bucketdesk.icns"
+
+if [[ -n "${MACOS_CODESIGN_IDENTITY:-}" ]]; then
+  codesign --force --deep --options runtime --timestamp --sign "$MACOS_CODESIGN_IDENTITY" "$APP_DIR"
+fi
 
 hdiutil create \
   -volname "BucketDesk" \
@@ -55,6 +62,10 @@ hdiutil create \
   -ov \
   -format UDZO \
   "$DMG_PATH"
+
+if [[ -n "${MACOS_CODESIGN_IDENTITY:-}" ]]; then
+  codesign --force --timestamp --sign "$MACOS_CODESIGN_IDENTITY" "$DMG_PATH"
+fi
 
 rm -rf "$STAGE_DIR"
 echo "$DMG_PATH"

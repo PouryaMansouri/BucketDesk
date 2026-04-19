@@ -47,9 +47,33 @@ jobs:
           name: linux-deb-${{ matrix.arch }}
           path: dist/release/*.deb
 
+  linux-appimage:
+    name: Linux AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build AppImage
+        run: |
+          chmod +x scripts/package-linux-appimage.sh
+          VERSION="${GITHUB_REF_NAME:-0.1.0}" ARCH=x86_64 ./scripts/package-linux-appimage.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: dist/release/*.AppImage
+
   macos-dmg:
     name: macOS DMG
     runs-on: macos-latest
+    env:
+      MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
     strategy:
       matrix:
         arch: [amd64, arm64]
@@ -58,10 +82,31 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Import signing certificate
+        if: env.MACOS_CERTIFICATE_P12 != ''
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$CERTIFICATE_PATH"
+          security create-keychain -p "$MACOS_CERTIFICATE_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$MACOS_CERTIFICATE_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
       - name: Build dmg
         run: |
           chmod +x scripts/package-macos-dmg.sh
           VERSION="${GITHUB_REF_NAME:-dev}" ARCH="${{ matrix.arch }}" ./scripts/package-macos-dmg.sh
+      - name: Notarize dmg
+        if: env.APPLE_ID != ''
+        run: |
+          DMG_PATH="$(ls dist/release/*.dmg | head -1)"
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --wait
+          xcrun stapler staple "$DMG_PATH"
       - uses: actions/upload-artifact@v4
         with:
           name: macos-dmg-${{ matrix.arch }}
@@ -70,6 +115,9 @@ jobs:
   windows-installer:
     name: Windows installer
     runs-on: windows-latest
+    env:
+      WINDOWS_CERTIFICATE_PFX: ${{ secrets.WINDOWS_CERTIFICATE_PFX }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -83,6 +131,13 @@ jobs:
           $env:GOARCH="amd64"
           $env:CGO_ENABLED="0"
           go build -trimpath -ldflags="-s -w -X main.version=$env:GITHUB_REF_NAME" -o dist/windows-amd64/bucketdesk.exe ./cmd/bucketdesk
+      - name: Sign Windows executable
+        if: env.WINDOWS_CERTIFICATE_PFX != ''
+        shell: pwsh
+        run: |
+          $certPath = "$env:RUNNER_TEMP\codesign.pfx"
+          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX))
+          & signtool sign /f $certPath /p $env:WINDOWS_CERTIFICATE_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 dist/windows-amd64/bucketdesk.exe
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
@@ -91,6 +146,13 @@ jobs:
         run: |
           $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME.TrimStart("v") } else { "0.1.0" }
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" packaging/windows/BucketDesk.iss
+      - name: Sign Windows installer
+        if: env.WINDOWS_CERTIFICATE_PFX != ''
+        shell: pwsh
+        run: |
+          $certPath = "$env:RUNNER_TEMP\codesign.pfx"
+          $setup = Get-ChildItem dist/release/*_setup.exe | Select-Object -First 1
+          & signtool sign /f $certPath /p $env:WINDOWS_CERTIFICATE_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $setup.FullName
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer
@@ -98,7 +160,7 @@ jobs:
 
   github-release:
     name: GitHub release
-    needs: [portable, linux-deb, macos-dmg, windows-installer]
+    needs: [portable, linux-deb, linux-appimage, macos-dmg, windows-installer]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:

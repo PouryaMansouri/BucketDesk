@@ -3,6 +3,8 @@ dist/
 web/dist/
 !internal/server/web/dist/
 !internal/server/web/dist/index.html
+!internal/server/web/dist/assets/
+!internal/server/web/dist/assets/*
 .DS_Store
 *.log
 *.tmp
@@ -10,3 +12,4 @@ web/dist/
 .env.*
 !.env.example
 coverage/
+assets/BucketDesk.iconset/
