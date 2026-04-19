@@ -6,8 +6,9 @@ VERSION="${VERSION:-dev}"
 ARCH="${ARCH:-x86_64}"
 GOARCH="amd64"
 OUT_DIR="$ROOT_DIR/dist/release"
+TOOL_DIR="$ROOT_DIR/dist/tools"
 APPDIR="$OUT_DIR/BucketDesk.AppDir"
-APPIMAGETOOL="$OUT_DIR/appimagetool-${ARCH}.AppImage"
+APPIMAGETOOL="$TOOL_DIR/appimagetool-${ARCH}.AppImage"
 
 if [[ "$ARCH" == "x86_64" ]]; then
   GOARCH="amd64"
@@ -16,7 +17,7 @@ else
   exit 1
 fi
 
-mkdir -p "$OUT_DIR"
+mkdir -p "$OUT_DIR" "$TOOL_DIR"
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
 
