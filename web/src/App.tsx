@@ -19,6 +19,7 @@ import {
   Settings,
   Trash2,
   Upload,
+  XCircle,
   Wifi,
 } from 'lucide-react'
 import { ChangeEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -84,6 +85,7 @@ const messages = {
     root: 'root',
     searchObjects: 'جستجو در objectها...',
     delete: 'حذف',
+    quit: 'خروج',
     readingBucket: 'در حال خواندن bucket...',
     emptyPath: 'این مسیر خالی است یا هنوز پروفایلی انتخاب نشده.',
     page: 'صفحه',
@@ -101,6 +103,7 @@ const messages = {
     uploaded: (count: string) => `${count} فایل آپلود شد`,
     confirmDelete: (count: string) => `حذف ${count} object انتخاب‌شده؟`,
     deleted: 'objectها حذف شدند',
+    shuttingDown: 'برنامه در حال بسته شدن است',
   },
   en: {
     appName: 'BucketDesk',
@@ -124,6 +127,7 @@ const messages = {
     root: 'root',
     searchObjects: 'Search objects...',
     delete: 'Delete',
+    quit: 'Quit',
     readingBucket: 'Reading bucket...',
     emptyPath: 'This path is empty, or no profile is selected yet.',
     page: 'Page',
@@ -141,6 +145,7 @@ const messages = {
     uploaded: (count: string) => `${count} files uploaded`,
     confirmDelete: (count: string) => `Delete ${count} selected object(s)?`,
     deleted: 'Objects deleted',
+    shuttingDown: 'BucketDesk is shutting down',
   },
 }
 
@@ -337,6 +342,11 @@ export function App() {
     }
   }
 
+  async function shutdown() {
+    setMessage(t.shuttingDown)
+    await fetch('/api/shutdown', { method: 'POST' })
+  }
+
   function switchLocale() {
     setLocale((current) => (current === 'fa' ? 'en' : 'fa'))
   }
@@ -419,6 +429,9 @@ export function App() {
             <button className="iconButton languageButton" title={locale === 'fa' ? 'English' : 'فارسی'} onClick={switchLocale}>
               <Languages size={18} />
               <span>{locale === 'fa' ? 'EN' : 'فا'}</span>
+            </button>
+            <button className="iconButton" title={t.quit} onClick={() => void shutdown()}>
+              <XCircle size={18} />
             </button>
             <button className="iconButton" title={t.refresh} onClick={() => loadObjects(prefix, page)} disabled={!activeProfile || busy}>
               {busy ? <Loader2 className="spin" size={18} /> : <RefreshCw size={18} />}

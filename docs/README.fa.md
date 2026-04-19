@@ -92,6 +92,56 @@ dist/bucketdesk
 http://127.0.0.1:5217
 ```
 
+## بسته‌های قابل انتشار
+
+BucketDesk می‌تواند در سه حالت ساده منتشر شود:
+
+| سیستم‌عامل | نصب‌کننده | پرتابل |
+| --- | --- | --- |
+| Windows | فایل setup با پسوند `.exe` | فایل `.zip` شامل `bucketdesk.exe` |
+| macOS | فایل `.dmg` شامل `BucketDesk.app` | فایل `.tar.gz` شامل باینری |
+| Linux | فایل `.deb` | فایل `.tar.gz` شامل باینری |
+
+حالت پرتابل نیاز به نصب ندارد. کاربر فایل را extract می‌کند و برنامه را اجرا می‌کند. برنامه به صورت خودکار سرور محلی را بالا می‌آورد و مرورگر را باز می‌کند.
+
+ساخت آرشیوهای پرتابل:
+
+```bash
+VERSION=v0.1.0 ./scripts/package-portable.sh
+```
+
+ساخت DMG برای مک:
+
+```bash
+VERSION=v0.1.0 ARCH=arm64 ./scripts/package-macos-dmg.sh
+VERSION=v0.1.0 ARCH=amd64 ./scripts/package-macos-dmg.sh
+```
+
+ساخت `.deb` روی لینوکس:
+
+```bash
+VERSION=v0.1.0 ARCH=amd64 ./scripts/package-linux-deb.sh
+VERSION=v0.1.0 ARCH=arm64 ./scripts/package-linux-deb.sh
+```
+
+نصب‌کننده ویندوز در GitHub Actions با Inno Setup ساخته می‌شود.
+
+## انتشار نسخه
+
+برای ساخت Release عمومی در GitHub:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Workflow انتشار این فایل‌ها را می‌سازد:
+
+- نصب‌کننده `.exe` برای Windows
+- فایل `.dmg` برای مک Intel و Apple Silicon
+- فایل `.deb` برای Linux amd64 و arm64
+- نسخه‌های پرتابل برای Windows، macOS و Linux
+
 ## مجوز
 
 BucketDesk تحت Apache License 2.0 منتشر می‌شود. فایل [LICENSE](../LICENSE) را ببینید.

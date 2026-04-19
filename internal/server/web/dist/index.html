@@ -110,6 +110,7 @@
           </div>
           <div class="actions">
             <button class="iconBtn" id="language">🌐 EN</button>
+            <button class="iconBtn" id="quit" title="Quit">⏻</button>
             <button class="iconBtn" id="refresh" title="Refresh">↻</button>
             <button class="btn" id="uploadBtn">⬆ <span data-i18n="upload">آپلود</span></button>
             <input id="files" type="file" multiple hidden />
@@ -178,6 +179,7 @@
           connectionFailed: 'اتصال برقرار نشد',
           copied: 'آدرس کپی شد',
           deleted: 'objectها حذف شدند',
+          shuttingDown: 'برنامه در حال بسته شدن است',
           confirmDelete: count => `حذف ${count} object انتخاب‌شده؟`,
           uploaded: count => `${count} فایل آپلود شد`,
           connectionOk: bucket => `اتصال موفق بود: ${bucket}`,
@@ -205,6 +207,7 @@
           connectionFailed: 'Connection failed',
           copied: 'URL copied',
           deleted: 'Objects deleted',
+          shuttingDown: 'BucketDesk is shutting down',
           confirmDelete: count => `Delete ${count} selected object(s)?`,
           uploaded: count => `${count} files uploaded`,
           connectionOk: bucket => `Connection succeeded: ${bucket}`,
@@ -365,6 +368,7 @@
       function escapeAttr(value) { return escapeHtml(value).replace(/`/g, '&#096;'); }
 
       $('language').onclick = () => { locale = locale === 'fa' ? 'en' : 'fa'; applyLocale(); renderObjects(folders, objects); };
+      $('quit').onclick = async () => { show(tr('shuttingDown')); await fetch('/api/shutdown', { method: 'POST' }); };
       $('dismiss').onclick = () => $('notice').hidden = true;
       $('newProfile').onclick = () => fill(emptyProfile);
       $('toggleSecret').onclick = () => $('secretKey').type = $('secretKey').type === 'password' ? 'text' : 'password';

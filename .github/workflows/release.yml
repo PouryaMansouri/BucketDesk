@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  portable:
+    name: Portable packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build portable archives
+        run: |
+          chmod +x scripts/package-portable.sh
+          VERSION="${GITHUB_REF_NAME:-dev}" ./scripts/package-portable.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portable
+          path: dist/release/*
+
+  linux-deb:
+    name: Linux deb packages
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build deb
+        run: |
+          chmod +x scripts/package-linux-deb.sh
+          VERSION="${GITHUB_REF_NAME:-0.1.0}" ARCH="${{ matrix.arch }}" ./scripts/package-linux-deb.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb-${{ matrix.arch }}
+          path: dist/release/*.deb
+
+  macos-dmg:
+    name: macOS DMG
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build dmg
+        run: |
+          chmod +x scripts/package-macos-dmg.sh
+          VERSION="${GITHUB_REF_NAME:-dev}" ARCH="${{ matrix.arch }}" ./scripts/package-macos-dmg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg-${{ matrix.arch }}
+          path: dist/release/*.dmg
+
+  windows-installer:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build Windows executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/windows-amd64 | Out-Null
+          $env:GOOS="windows"
+          $env:GOARCH="amd64"
+          $env:CGO_ENABLED="0"
+          go build -trimpath -ldflags="-s -w -X main.version=$env:GITHUB_REF_NAME" -o dist/windows-amd64/bucketdesk.exe ./cmd/bucketdesk
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+      - name: Build setup exe
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME.TrimStart("v") } else { "0.1.0" }
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" packaging/windows/BucketDesk.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/release/*_setup.exe
+
+  github-release:
+    name: GitHub release
+    needs: [portable, linux-deb, macos-dmg, windows-installer]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "BucketDesk $GITHUB_REF_NAME" \
+            --notes "BucketDesk release $GITHUB_REF_NAME"

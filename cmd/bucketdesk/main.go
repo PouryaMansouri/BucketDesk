@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"runtime"
 	"time"
@@ -17,9 +18,17 @@ import (
 	"github.com/PouryaMansouri/BucketDesk/internal/server"
 )
 
+var version = "dev"
+
 func main() {
 	port := flag.Int("port", defaultPort(), "HTTP port for the local UI")
+	openBrowser := flag.Bool("open-browser", shouldOpenBrowser(), "Open BucketDesk in the default browser")
+	showVersion := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
@@ -51,6 +60,14 @@ func main() {
 	url := "http://" + listener.Addr().String()
 	logger.Info("BucketDesk is running", "url", url, "os", runtime.GOOS)
 	fmt.Printf("BucketDesk: %s\n", url)
+	if *openBrowser {
+		go func() {
+			time.Sleep(250 * time.Millisecond)
+			if err := openURL(url); err != nil {
+				logger.Warn("failed to open browser", "error", err)
+			}
+		}()
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -72,4 +89,19 @@ func defaultPort() int {
 		}
 	}
 	return 5217
+}
+
+func shouldOpenBrowser() bool {
+	return os.Getenv("CI") == "" && os.Getenv("BUCKETDESK_OPEN_BROWSER") != "false"
+}
+
+func openURL(url string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return exec.Command("open", url).Start()
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	default:
+		return exec.Command("xdg-open", url).Start()
+	}
 }

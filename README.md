@@ -92,6 +92,56 @@ Open the printed local URL, usually:
 http://127.0.0.1:5217
 ```
 
+## Distribution
+
+BucketDesk can be shipped in three user-friendly forms:
+
+| Platform | Installer | Portable |
+| --- | --- | --- |
+| Windows | `.exe` setup installer | `.zip` with `bucketdesk.exe` |
+| macOS | `.dmg` with `BucketDesk.app` | `.tar.gz` with `bucketdesk` |
+| Linux | `.deb` package | `.tar.gz` with `bucketdesk` |
+
+Portable builds do not require installation. Users extract the archive and run the executable. BucketDesk starts a local server and opens the browser automatically.
+
+Create all portable archives locally:
+
+```bash
+VERSION=v0.1.0 ./scripts/package-portable.sh
+```
+
+Create macOS DMG files locally:
+
+```bash
+VERSION=v0.1.0 ARCH=arm64 ./scripts/package-macos-dmg.sh
+VERSION=v0.1.0 ARCH=amd64 ./scripts/package-macos-dmg.sh
+```
+
+Create Linux `.deb` packages on Linux:
+
+```bash
+VERSION=v0.1.0 ARCH=amd64 ./scripts/package-linux-deb.sh
+VERSION=v0.1.0 ARCH=arm64 ./scripts/package-linux-deb.sh
+```
+
+Windows installer builds are handled in GitHub Actions with Inno Setup.
+
+## Release Automation
+
+Push a version tag to create a GitHub Release with installers and portable archives:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow builds:
+
+- Windows setup `.exe`
+- macOS `.dmg` for Intel and Apple Silicon
+- Linux `.deb` for amd64 and arm64
+- Portable archives for Windows, macOS, and Linux
+
 ## GitHub Repository
 
 This project is prepared for:

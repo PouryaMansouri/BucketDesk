@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -35,9 +36,18 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/objects", s.handleListObjects)
 	mux.HandleFunc("POST /api/upload", s.handleUpload)
 	mux.HandleFunc("DELETE /api/objects", s.handleDeleteObjects)
+	mux.HandleFunc("POST /api/shutdown", s.handleShutdown)
 	mux.Handle("/", s.staticUI())
 
 	return s.withMiddleware(mux)
+}
+
+func (s *Server) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "shutting down"})
+	go func() {
+		time.Sleep(250 * time.Millisecond)
+		os.Exit(0)
+	}()
 }
 
 func (s *Server) withMiddleware(next http.Handler) http.Handler {
